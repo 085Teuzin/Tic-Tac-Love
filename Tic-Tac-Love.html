@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tic-Tac-Love | Online - Made By: @085_Teuzinnn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@300;400;600;800&display=swap');
+        :root { --p1: #00d4ff; --p2: #ff007f; --bg: #020617; --card: rgba(15, 23, 42, 0.7); --txt: #f8fafc; }
+        body { background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); color: var(--txt); font-family: 'Poppins', sans-serif; height: 100vh; width: 100vw; display: flex; flex-direction: column; align-items: center; margin: 0; overflow: hidden; }
+        .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+        .glass { background: var(--card); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 28px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .cell { aspect-ratio: 1/1; background: rgba(255,255,255,0.03); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 3rem; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; border: 1px solid rgba(255,255,255,0.05); }
+        .cell:hover { background: rgba(255,255,255,0.08); }
+        .cell:active { transform: scale(0.9); }
+        .cell.o::before { content: "💍"; filter: drop-shadow(0 0 15px var(--p1)); animation: pop 0.3s; }
+        .cell.x::before { content: "❤️"; filter: drop-shadow(0 0 15px var(--p2)); animation: pop 0.3s; }
+        @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+        .turn-o { border: 2px solid var(--p1) !important; box-shadow: 0 0 30px rgba(0,212,255,0.2); }
+        .turn-x { border: 2px solid var(--p2) !important; box-shadow: 0 0 30px rgba(255,0,127,0.2); }
+        #toast { position: fixed; top: 12%; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 12px 24px; border-radius: 50px; font-weight: 600; animation: slideDown 3s forwards; pointer-events: none; white-space: nowrap; }
+        @keyframes slideDown { 0% { opacity:0; transform:translate(-50%,-20px); } 15% { opacity:1; transform:translate(-50%,0); } 85% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-20px); } }
+        .btn-grad { background-size: 200% auto; transition: 0.5s; }
+        .btn-grad:hover { background-position: right center; }
+        .win-line { background: rgba(255,255,255,0.1) !important; transform: scale(1.02); border: 2px solid gold !important; }
+    </style>
+</head>
+<body>
+    <div class="stars" id="starField"></div>
+    <div class="fixed top-5 left-5 right-5 z-50 flex justify-between items-center">
+        <button onclick="openChat()" class="p-4 glass rounded-full hover:scale-110 transition relative">💌<span id="chatDot" class="hidden absolute top-2 right-2 w-3 h-3 bg-pink-500 rounded-full border-2 border-slate-900"></span></button>
+        <button onclick="toggleFS()" class="p-4 glass rounded-full hover:scale-110 transition">📺</button>
+    </div>
+    <header class="text-center mt-16 mb-6 animate__animated animate__fadeInDown flex-shrink-0">
+        <h1 class="text-5xl font-bold" style="font-family: 'Dancing Script';"><span style="color: var(--p1)">Tic-Tac</span><span style="color: var(--p2)">-Love</span></h1>
+    </header>
+    <main class="w-full max-w-[380px] px-6 flex flex-col items-center justify-start flex-1">
+        <div id="lobby" class="w-full glass p-8 space-y-6 animate__animated animate__zoomIn">
+            <div class="space-y-4">
+                <input type="text" id="nick" placeholder="Seu apelido..." maxlength="12" class="w-full bg-white/5 p-4 rounded-2xl outline-none border border-white/10 text-center focus:border-pink-500 transition-all font-semibold">
+                <input type="text" id="room" placeholder="Código da Sala" class="w-full bg-white/5 p-4 rounded-2xl outline-none border border-white/10 text-center focus:border-sky-500 transition-all">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="start(true)" class="btn-grad bg-gradient-to-r from-sky-600 to-indigo-600 py-4 rounded-2xl font-bold text-white shadow-lg text-sm">Criar Sala</button>
+                <button onclick="start(false)" class="btn-grad bg-gradient-to-r from-pink-600 to-purple-600 py-4 rounded-2xl font-bold text-white shadow-lg text-sm">Entrar</button>
+            </div>
+            <div id="shareArea" class="hidden text-center"><p id="share" class="text-[10px] text-sky-400 font-bold tracking-widest uppercase cursor-pointer">LINK DA SALA 🔗</p></div>
+        </div>
+        <div id="game" class="hidden w-full space-y-4 animate__animated animate__fadeIn">
+            <div class="glass p-4 flex justify-around items-center relative overflow-hidden">
+                <div id="p1Card" class="text-center"><span id="n1" class="block text-[9px] uppercase font-bold opacity-50 italic">...</span><span id="s1" class="text-3xl font-black" style="color:var(--p1)">0</span></div>
+                <div class="flex flex-col items-center"><div class="text-lg font-thin opacity-20">VS</div><div id="turnIndicator" class="w-2 h-2 rounded-full mt-1 animate-pulse"></div></div>
+                <div id="p2Card" class="text-center"><span id="n2" class="block text-[9px] uppercase font-bold opacity-50 italic">...</span><span id="s2" class="text-3xl font-black" style="color:var(--p2)">0</span></div>
+            </div>
+            <div id="board" class="grid grid-cols-3 gap-3 p-3 glass transition-all duration-500">
+                <div class="cell" onclick="hit(0)" data-i="0"></div>
+                <div class="cell" onclick="hit(1)" data-i="1"></div>
+                <div class="cell" onclick="hit(2)" data-i="2"></div>
+                <div class="cell" onclick="hit(3)" data-i="3"></div>
+                <div class="cell" onclick="hit(4)" data-i="4"></div>
+                <div class="cell" onclick="hit(5)" data-i="5"></div>
+                <div class="cell" onclick="hit(6)" data-i="6"></div>
+                <div class="cell" onclick="hit(7)" data-i="7"></div>
+                <div class="cell" onclick="hit(8)" data-i="8"></div>
+            </div>
+            <button id="rematch" onclick="doReset()" class="hidden w-full bg-white text-black py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl animate__animated animate__bounceIn">Revanche</button>
+            <div id="status" class="text-center text-[10px] font-black uppercase tracking-[0.2em] text-white/40"></div>
+        </div>
+        <footer class="text-center mt-5 text-gray-500 text-sm">Made By: <a href="https://instagram.com/085_Teuzinnn" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold transition duration-200">@085_Teuzinnn</a></footer>
+    </main>
+    <div id="chat" class="fixed inset-0 bg-black/60 backdrop-blur-md hidden z-[100] items-center justify-center p-6" onclick="openChat()">
+        <div class="glass p-6 w-full max-w-sm border-white/20 animate__animated animate__slideInUp" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-4"><h3 class="font-bold uppercase text-[10px] tracking-widest opacity-50">Mensagens</h3><button onclick="openChat()" class="text-white/20 hover:text-white">✕</button></div>
+            <div id="msgs" class="grid grid-cols-2 gap-2 mb-6"></div>
+            <input type="text" id="cmsg" placeholder="Sua mensagem..." class="w-full bg-white/5 p-4 rounded-2xl border border-white/10 outline-none focus:border-pink-500 transition text-sm">
+        </div>
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, update, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        const cfg = { apiKey: "AIzaSyA2Jt5MbVrZDcCXzxLJday-wLsrO5J7UKA", authDomain: "tic-tac-love-teuzin.firebaseapp.com", databaseURL: "https://tic-tac-love-teuzin-default-rtdb.firebaseio.com", projectId: "tic-tac-love-teuzin", appId: "1:1081950364904:web:e12eed3b150611a90d555d" };
+        const app = initializeApp(cfg);
+        const db = getDatabase(app);
+        let sym, nick, rRef, lastT = 0, active = false, board = Array(9).fill(""), turn = 'O', connected = false;
+        const quick = ["Beijo! 💋", "Boa! 👏", "Bora Gzr! 😈", "Eita! 😲", "Facil 😜", "Ganhei! 🏆", "Gostosa(o)! 🫦", "Hahaha! 😂", "Hehehe! 😏", "Hihihi! 😁", "Linda(o)! 😍", "Mais uma ? 🎮", "Sortudo(a)! ✨", "Sua vez! 🥰", "Te amo! ❤️", "Vixi! 🤨"];
+        window.toggleFS = () => { if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
+        window.start = async (host) => {
+            const rid = document.getElementById('room').value.trim().toLowerCase();
+            nick = document.getElementById('nick').value.trim() || (host ? "P1" : "P2");
+            if(!rid) return;
+            sym = host ? 'O' : 'X';
+            rRef = ref(db, 'rooms/' + rid);
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('game').classList.remove('hidden');
+            if(host) { await set(rRef, { board: Array(9).fill(""), turn: 'O', p1: nick, p2: "...", scores: {O: 0, X: 0}, msg: {t:"", s:"", ts:0}, status: "waiting" });
+                document.getElementById('shareArea').classList.remove('hidden');
+                document.getElementById('share').onclick = () => { navigator.clipboard.writeText(window.location.origin + window.location.pathname + "?room=" + rid); show("Link Copiado! 💌", false); };
+            } else { update(rRef, { p2: nick, status: "ready" }); }
+            onValue(rRef, (s) => {
+                const d = s.val(); if(!d) return;
+                board = d.board; turn = d.turn; connected = d.status === "ready";
+                document.getElementById('n1').innerText = d.p1; document.getElementById('n2').innerText = d.p2;
+                document.getElementById('s1').innerText = d.scores?.O || 0; document.getElementById('s2').innerText = d.scores?.X || 0;
+                document.getElementById('board').className = `grid grid-cols-3 gap-3 p-3 glass transition-all duration-500 ${turn === 'O' ? 'turn-o' : 'turn-x'}`;
+                document.getElementById('p1Card').style.opacity = turn === 'O' ? '1' : '0.3';
+                document.getElementById('p2Card').style.opacity = turn === 'X' ? '1' : '0.3';
+                document.getElementById('turnIndicator').style.background = turn === 'O' ? 'var(--p1)' : 'var(--p2)';
+                draw();
+                if(d.msg && d.msg.ts > lastT) { lastT = d.msg.ts; if(d.msg.t) { show(d.msg.t, d.msg.s === 'X'); if(!document.getElementById('chat').classList.contains('flex')) document.getElementById('chatDot').classList.remove('hidden'); } }
+                const w = check();
+                if(w) finish(w); else if(!board.includes("")) finish('d'); else { active = true; document.getElementById('rematch').classList.add('hidden'); document.getElementById('status').innerText = !connected ? "Aguardando..." : (turn === sym ? "Sua vez!" : "Vez dele(a)"); }
+            });
+        };
+        window.hit = (i) => { if(active && connected && board[i] === "" && turn === sym) { board[i] = sym; update(rRef, { board, turn: sym === 'O' ? 'X' : 'O' }); } };
+        window.doReset = () => update(rRef, { board: Array(9).fill(""), turn: 'O' });
+        window.openChat = () => { const m = document.getElementById('chat'); m.classList.toggle('hidden'); m.classList.toggle('flex'); document.getElementById('chatDot').classList.add('hidden'); };
+        function draw() { board.forEach((v, i) => { const c = document.querySelector(`[data-i="${i}"]`); c.className = `cell ${v.toLowerCase()}`; }); }
+        function check() {
+            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            for(let l of wins) if(board[l[0]] && board[l[0]] === board[l[1]] && board[l[0]] === board[l[2]]) { l.forEach(idx => document.querySelector(`[data-i="${idx}"]`).classList.add('win-line')); return board[l[0]]; }
+            return null;
+        }
+        function finish(r) {
+            if(!active) return; active = false;
+            document.getElementById('rematch').classList.remove('hidden');
+            if(r === 'd') document.getElementById('status').innerText = "Empate!";
+            else {
+                document.getElementById('status').innerText = r === sym ? "Venceu! ✨" : "Perdeu... 💔";
+                if(r === sym) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: [r === 'O' ? '#00d4ff' : '#ff007f'] }); update(rRef, { [`scores/${r}`]: increment(1) }); }
+            }
+        }
+        function show(m, isP2) {
+            const d = document.createElement('div'); d.id = "toast";
+            d.className = `glass shadow-2xl border-2 ${isP2 ? 'text-pink-500 border-pink-500/50' : 'text-sky-400 border-sky-400/50'}`;
+            d.innerText = m; document.body.appendChild(d); setTimeout(() => d.remove(), 3000);
+        }
+        const box = document.getElementById('msgs');
+        quick.forEach(m => {
+            const b = document.createElement('button'); b.className = "p-3 bg-white/5 rounded-xl text-[9px] font-bold uppercase border border-white/5"; b.innerText = m; 
+            b.onclick = () => { update(rRef, { msg: { t: m, s: sym, ts: Date.now() } }); openChat(); }; box.appendChild(b);
+        });
+        document.getElementById('cmsg').onkeypress = (e) => { if(e.key === 'Enter' && e.target.value.trim()) { update(rRef, { msg: { t: e.target.value, s: sym, ts: Date.now() } }); e.target.value = ""; openChat(); } };
+        const url = new URLSearchParams(window.location.search); if(url.has('room')) document.getElementById('room').value = url.get('room');
+        const starField = document.getElementById('starField');
+        for(let i=0; i<30; i++) {
+            const star = document.createElement('div'); star.style.position = 'absolute'; star.style.width = '2px'; star.style.height = '2px'; star.style.background = 'white';
+            star.style.left = Math.random() * 100 + '%'; star.style.top = Math.random() * 100 + '%'; star.style.opacity = Math.random(); star.style.borderRadius = '50%'; starField.appendChild(star);
+        }
+    </script>
+</body>
+</html>
